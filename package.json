@@ -1,0 +1,37 @@
+{
+  "name": "to",
+  "version": "0.1.0",
+  "description": "A web application to illustrate statistical learning concepts.",
+  "source": "src/index.html",
+  "browserslist": "> 0.5%, last 2 versions, not dead",
+  "scripts": {
+    "dev": "mkdir -p dist && cp static/* dist && parcel",
+    "build": "parcel build && cp static/* dist/",
+    "format": "prettier --write \"src/**/*.{js,ts,html}\"",
+    "lint": "tsc --noEmit",
+    "clean": "rimraf dist .parcel-cache"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/annolangen/todotxt.git"
+  },
+  "author": "Anno Langen <anno.langen@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29.5.12",
+    "buffer": "^6.0.3",
+    "jest": "^29.7.0",
+    "parcel": "^2.15.2",
+    "prettier": "^3.3.3",
+    "process": "^0.11.10",
+    "rimraf": "^6.0.1",
+    "ts-jest": "^29.2.2"
+  },
+  "dependencies": {
+    "@lit-labs/virtualizer": "^2.1.0",
+    "@tensorflow/tfjs": "^4.22.0",
+    "@tensorflow/tfjs-vis": "^1.1.0",
+    "lit-html": "^3.3.0"
+  }
+}
