@@ -10,14 +10,6 @@ enum Direction {
   DESC,
 }
 
-// Event handler for the textarea's input event
-function onInput(e: Event) {
-  const textarea = e.currentTarget as HTMLTextAreaElement;
-  state.rawText = textarea.value;
-  console.log("New content received. Length:", state.rawText.length);
-  // In Milestone 2, we will call a render function here
-  // to parse the text and display the table.
-}
 /** Represents a single parsed todo.txt task. */
 interface Task {
   raw: string;
@@ -84,7 +76,18 @@ const state = {
   toHighlight: "",
   currentView: View.RAW,
   order: makeCachingOrder(),
+  isMobileView: window.matchMedia("(max-width: 768px)").matches,
 };
+
+// Event handler for the textarea's input event
+function onInput(e: Event) {
+  const textarea = e.currentTarget as HTMLTextAreaElement;
+  const wasEmpty = state.rawText === "";
+  state.rawText = textarea.value;
+  if (wasEmpty && state.rawText !== "" && state.currentView === View.RAW) {
+    state.currentView = View.TABLE;
+  }
+}
 
 function descriptionHtml(task: Task) {
   const { description } = task;
@@ -150,6 +153,35 @@ function parseLine(line: string): Task {
   };
 }
 
+function taskToCard(task: Task) {
+  const { isComplete, priority, completionDate, creationDate } = task;
+  return html`<div
+    class="card mb-3"
+    style=${isComplete ? "text-decoration: line-through; opacity: 0.6;" : ""}
+  >
+    <div class="card-content py-3 px-4">
+      <div class="content">
+        <p class="mb-2">${descriptionHtml(task)}</p>
+        <div class="tags">
+          ${priority
+            ? html`<span class="tag is-warning is-light">P: ${priority}</span>`
+            : ""}
+          ${creationDate
+            ? html`<span class="tag is-info is-light"
+                >Created: ${creationDate}</span
+              >`
+            : ""}
+          ${completionDate
+            ? html`<span class="tag is-success is-light"
+                >Completed: ${completionDate}</span
+              >`
+            : ""}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
 function fileToTable(text: string) {
   const tasks = text.split("\n").map(line => parseLine(line));
   function headerClicked(column: number) {
@@ -166,7 +198,9 @@ function fileToTable(text: string) {
       <tr>
         ${columns.map(
           ({ name }, i) =>
-            html`<th @click=${() => headerClicked(i)}>${name}</th>`
+            html`<th @click=${() => headerClicked(i)} style="cursor: pointer;">
+              ${name}
+            </th>`
         )}
       </tr>
     </thead>
@@ -185,16 +219,59 @@ function fileToTable(text: string) {
   </table>`;
 }
 
+function fileToCards(text: string) {
+  const tasks = text.split("\n").map(line => parseLine(line));
+  function sortChanged(e: Event) {
+    const select = e.currentTarget as HTMLSelectElement;
+    const column = parseInt(select.value, 10);
+    state.order = state.order.reorder(tasks, column, state.order.direction);
+  }
+
+  function directionChanged() {
+    const newDirection =
+      state.order.direction === Direction.ASC ? Direction.DESC : Direction.ASC;
+    state.order = state.order.reorder(
+      tasks,
+      state.order.column ?? 0,
+      newDirection
+    );
+  }
+
+  return html` <div class="field has-addons">
+      <div class="control">
+        <div class="select">
+          <select
+            @change=${sortChanged}
+            .value=${(state.order.column ?? -1).toString()}
+          >
+            <option value="-1" disabled>Sort by</option>
+            ${columns.map(
+              (c, i) => html`<option value=${i}>${c.name}</option>`
+            )}
+          </select>
+        </div>
+      </div>
+      <div class="control">
+        <button class="button" @click=${directionChanged}>
+          ${state.order.direction === Direction.ASC ? "⬆" : "⬇"}
+        </button>
+      </div>
+    </div>
+    ${state.order.permutation(tasks).map(i => taskToCard(tasks[i]))}`;
+}
+
 // Main application template
 function appHtml() {
   return html`<section class="section">
     <div class="container">
       <div class="box">
         <h1 class="title">Todo.txt Viewer</h1>
-        <p class="subtitle">
-          Paste the contents of your <code>todo.txt</code> file into the area of
-          the Raw Text tab.
-        </p>
+        ${state.rawText === ""
+          ? html`<p class="subtitle">
+              Paste the contents of your <code>todo.txt</code> file into the
+              area of the Raw Text tab.
+            </p>`
+          : ""}
         <div class="tabs">
           <ul>
             <li class=${state.currentView === View.RAW ? "is-active" : ""}>
@@ -217,7 +294,9 @@ function appHtml() {
                 ></textarea>
               </div>
             </div>`
-          : html`<div class="field">${fileToTable(state.rawText)}</div>`}
+          : state.isMobileView
+            ? html`<div class="field">${fileToCards(state.rawText)}</div>`
+            : html`<div class="field">${fileToTable(state.rawText)}</div>`}
       </div>
     </div>
   </section>`;
@@ -230,6 +309,11 @@ const renderApp = () => render(appHtml(), appRoot);
 // Set up global event handlers to trigger re-renders.
 // This leverages event bubbling from components like the textarea.
 window.onclick = window.oninput = window.onhashchange = renderApp;
+
+window.onresize = () => {
+  state.isMobileView = window.matchMedia("(max-width: 768px)").matches;
+  renderApp();
+};
 
 // Initial render of the application.
 renderApp();
