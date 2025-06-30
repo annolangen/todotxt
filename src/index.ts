@@ -1,5 +1,10 @@
 import { html, render } from "lit-html";
 
+enum View {
+  RAW,
+  TABLE,
+}
+
 enum Direction {
   ASC,
   DESC,
@@ -63,7 +68,6 @@ function makeCachingOrder(): Order {
       direction === Direction.DESC
         ? (a, b) => ascCompareFn(b, a)
         : ascCompareFn;
-    console.log("now ordered " + direction);
     cache.sort(compareFn);
     return { column, direction, permutation, reorder };
   };
@@ -78,6 +82,7 @@ function makeCachingOrder(): Order {
 const state = {
   rawText: "",
   toHighlight: "",
+  currentView: View.RAW,
   order: makeCachingOrder(),
 };
 
@@ -187,20 +192,32 @@ function appHtml() {
       <div class="box">
         <h1 class="title">Todo.txt Viewer</h1>
         <p class="subtitle">
-          Paste the contents of your <code>todo.txt</code> file below.
+          Paste the contents of your <code>todo.txt</code> file into the area of
+          the Raw Text tab.
         </p>
-        <div class="field">
-          <div class="control">
-            <textarea
-              class="textarea is-family-monospace"
-              @input=${onInput}
-              rows="15"
-              placeholder="e.g., (A) Buy milk +groceries @store"
-              .value=${state.rawText}
-            ></textarea>
-          </div>
+        <div class="tabs">
+          <ul>
+            <li class=${state.currentView === View.RAW ? "is-active" : ""}>
+              <a @click=${() => (state.currentView = View.RAW)}>Raw Text</a>
+            </li>
+            <li class=${state.currentView === View.TABLE ? "is-active" : ""}>
+              <a @click=${() => (state.currentView = View.TABLE)}>Table</a>
+            </li>
+          </ul>
         </div>
-        <div class="field">${fileToTable(state.rawText)}</div>
+        ${state.currentView === View.RAW
+          ? html`<div class="field">
+              <div class="control">
+                <textarea
+                  class="textarea is-family-monospace"
+                  @input=${onInput}
+                  rows="15"
+                  placeholder="e.g., (A) Buy milk +groceries @store"
+                  .value=${state.rawText}
+                ></textarea>
+              </div>
+            </div>`
+          : html`<div class="field">${fileToTable(state.rawText)}</div>`}
       </div>
     </div>
   </section>`;
