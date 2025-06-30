@@ -1,10 +1,9 @@
 import { html, render } from "lit-html";
 
-// Application state
-const state = {
-  rawText: "",
-  toHighlight: "",
-};
+enum Direction {
+  ASC,
+  DESC,
+}
 
 // Event handler for the textarea's input event
 function onInput(e: Event) {
@@ -27,6 +26,60 @@ interface Task {
   // contexts: string[];
   // dueDate: string | null;
 }
+
+const columns: {
+  name: string;
+  accessor: (task: Task) => any;
+}[] = [
+  { name: "Priority", accessor: task => task.priority },
+  { name: "Completion Date", accessor: task => task.completionDate },
+  { name: "Creation Date", accessor: task => task.creationDate },
+  { name: "Description", accessor: task => descriptionHtml(task) },
+];
+
+interface Order {
+  column?: number;
+  direction: Direction;
+  permutation(tasks: Task[]): number[];
+  reorder(tasks: Task[], colum: number, direction: Direction): Order;
+}
+
+function makeCachingOrder(): Order {
+  let cache: number[] | null = null;
+  const permutation = tasks => {
+    if (!cache || cache.length !== tasks.length) {
+      cache = Array.from({ length: tasks.length }, (_, i) => i);
+    }
+    return cache;
+  };
+  const reorder = (tasks: Task[], column: number, direction: Direction) => {
+    if (column < 0 || column >= columns.length) return makeCachingOrder();
+    cache = Array.from({ length: tasks.length }, (_, i) => i);
+    const accessor =
+      column === 3 ? a => a.description : columns[column].accessor;
+    const ascCompareFn = (a, b) =>
+      (accessor(tasks[a]) || "").localeCompare(accessor(tasks[b]) || "");
+    const compareFn =
+      direction === Direction.DESC
+        ? (a, b) => ascCompareFn(b, a)
+        : ascCompareFn;
+    console.log("now ordered " + direction);
+    cache.sort(compareFn);
+    return { column, direction, permutation, reorder };
+  };
+  return {
+    direction: Direction.ASC,
+    permutation,
+    reorder,
+  };
+}
+
+// Application state
+const state = {
+  rawText: "",
+  toHighlight: "",
+  order: makeCachingOrder(),
+};
 
 function descriptionHtml(task: Task) {
   const { description } = task;
@@ -71,16 +124,6 @@ function descriptionHtml(task: Task) {
   return parts;
 }
 
-const columns: {
-  name: string;
-  accessor: (task: Task) => any;
-}[] = [
-  { name: "Priority", accessor: task => task.priority },
-  { name: "Completion Date", accessor: task => task.completionDate },
-  { name: "Creation Date", accessor: task => task.creationDate },
-  { name: "Description", accessor: task => descriptionHtml(task) },
-];
-
 function parseLine(line: string): Task {
   const raw = line;
   const done_match = /^(x?)/.exec(line);
@@ -104,19 +147,33 @@ function parseLine(line: string): Task {
 
 function fileToTable(text: string) {
   const tasks = text.split("\n").map(line => parseLine(line));
+  function headerClicked(column: number) {
+    state.order = state.order.reorder(
+      tasks,
+      column,
+      state.order.column === column && state.order.direction === Direction.ASC
+        ? Direction.DESC
+        : Direction.ASC
+    );
+  }
   return html`<table class="table is-fullwidth is-hoverable is-striped">
     <thead>
       <tr>
-        ${columns.map(column => html`<th>${column.name}</th>`)}
+        ${columns.map(
+          ({ name }, i) =>
+            html`<th @click=${() => headerClicked(i)}>${name}</th>`
+        )}
       </tr>
     </thead>
     <tbody>
-      ${tasks.map(
-        task =>
+      ${state.order.permutation(tasks).map(
+        i =>
           html`<tr
-            style=${task.isComplete ? "text-decoration: line-through" : ""}
+            style=${tasks[i].isComplete ? "text-decoration: line-through" : ""}
           >
-            ${columns.map(column => html`<td>${column.accessor(task)}</td>`)}
+            ${columns.map(
+              column => html`<td>${column.accessor(tasks[i])}</td>`
+            )}
           </tr>`
       )}
     </tbody>

@@ -36,6 +36,21 @@ This document breaks down the work outlined in `vision.md` into smaller, managea
   - All other instances of that same tag in the table are visually highlighted.
 - **`vision.md` coverage:** "hovering over a context, project, or key/value tag will highlight the other occurrences in the file"
 
+#### testing
+
+```
+x 2024-05-20 2024-05-19 Mow the lawn @home
+(A) 2024-05-23 Prepare for meeting +work @office
+(B) 2024-05-25 Plan weekend trip +family due:2024-05-26
+(C) 2024-05-21 Schedule dentist appointment +health
+2024-05-22 Water the plants @home
+(A) 2024-05-20 Call mom +family @home
+(B) 2024-05-19 Buy groceries +shopping @store due:2024-05-20
+x 2024-05-18 2024-05-17 Finish project report +work @computer
+(C) 2024-05-24 Email team about project update +work @computer
+Read a book +leisure
+```
+
 ## Milestone 5: Filtering by Tags
 
 - **Goal:** Allow users to focus on specific subsets of their tasks.
