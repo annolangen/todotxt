@@ -6,7 +6,7 @@
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "scripts": {
     "dev": "mkdir -p dist && cp static/* dist && parcel",
-    "build": "parcel build && cp static/* dist/",
+    "build": "parcel build --public-url ./ && cp static/* dist/",
     "format": "prettier --write \"src/**/*.{js,ts,html}\"",
     "lint": "tsc --noEmit",
     "clean": "rimraf dist .parcel-cache"
