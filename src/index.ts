@@ -3,6 +3,7 @@ import { html, render } from "lit-html";
 // Application state
 const state = {
   rawText: "",
+  toHighlight: "",
 };
 
 // Event handler for the textarea's input event
@@ -12,6 +13,114 @@ function onInput(e: Event) {
   console.log("New content received. Length:", state.rawText.length);
   // In Milestone 2, we will call a render function here
   // to parse the text and display the table.
+}
+/** Represents a single parsed todo.txt task. */
+interface Task {
+  raw: string;
+  isComplete: boolean;
+  priority?: string;
+  completionDate?: string;
+  creationDate?: string;
+  description: string;
+  // Advanced properties can be added later
+  // projects: string[];
+  // contexts: string[];
+  // dueDate: string | null;
+}
+
+function descriptionHtml(task: Task) {
+  const { description } = task;
+  const tagRegex = /([+@][a-zA-Z0-9]+|[a-zA-Z0-9]+:[a-zA-Z0-9]+)/g;
+  const parts: any[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = tagRegex.exec(description)) !== null) {
+    // Add the text before the match
+    if (match.index > lastIndex) {
+      parts.push(description.slice(lastIndex, match.index));
+    }
+
+    // Add the matched tag inside a span, with highlighting if it matches
+    const tagText = match[0];
+    parts.push(
+      html`<a
+        @mouseover=${() => {
+          state.toHighlight = tagText;
+          renderApp();
+        }}
+        @mouseout=${() => {
+          state.toHighlight = "";
+          renderApp();
+        }}
+        style="cursor: pointer; ${state.toHighlight === tagText
+          ? "background-color: #FFFF00;"
+          : ""}"
+        >${tagText}</a
+      >`
+    );
+
+    lastIndex = tagRegex.lastIndex;
+  }
+
+  // Add any remaining text after the last match
+  if (lastIndex < description.length) {
+    parts.push(description.slice(lastIndex));
+  }
+
+  return parts;
+}
+
+const columns: {
+  name: string;
+  accessor: (task: Task) => any;
+}[] = [
+  { name: "Priority", accessor: task => task.priority },
+  { name: "Completion Date", accessor: task => task.completionDate },
+  { name: "Creation Date", accessor: task => task.creationDate },
+  { name: "Description", accessor: task => descriptionHtml(task) },
+];
+
+function parseLine(line: string): Task {
+  const raw = line;
+  const done_match = /^(x?)/.exec(line);
+  line = line.slice(done_match![0].length);
+  const priority_match = /^ *(?:\(([A-Z])\))?/.exec(line);
+  line = line.slice(priority_match![0].length);
+  const completion_date_match = /^ *(\d{4}-\d{2}-\d{2})?/.exec(line);
+  line = line.slice(completion_date_match![0].length);
+  const creation_date_match = /^ *(\d{4}-\d{2}-\d{2})?/.exec(line);
+  line = line.slice(creation_date_match![0].length);
+  const description_match = /^ *(.*)/.exec(line);
+  return {
+    raw,
+    isComplete: done_match![1] === "x",
+    priority: priority_match![1] || undefined,
+    completionDate: completion_date_match![1] || undefined,
+    creationDate: creation_date_match![1] || undefined,
+    description: description_match![1],
+  };
+}
+
+function fileToTable(text: string) {
+  const tasks = text.split("\n").map(line => parseLine(line));
+  return html`<table class="table is-fullwidth is-hoverable is-striped">
+    <thead>
+      <tr>
+        ${columns.map(column => html`<th>${column.name}</th>`)}
+      </tr>
+    </thead>
+    <tbody>
+      ${tasks.map(
+        task =>
+          html`<tr
+            style=${task.isComplete ? "text-decoration: line-through" : ""}
+          >
+            ${columns.map(column => html`<td>${column.accessor(task)}</td>`)}
+          </tr>`
+      )}
+    </tbody>
+  </table>`;
 }
 
 // Main application template
@@ -34,6 +143,7 @@ function appHtml() {
             ></textarea>
           </div>
         </div>
+        <div class="field">${fileToTable(state.rawText)}</div>
       </div>
     </div>
   </section>`;
