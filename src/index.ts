@@ -75,6 +75,7 @@ const state = {
   rawText: "",
   toHighlight: "",
   currentView: View.RAW,
+  tags: [] as string[],
   order: makeCachingOrder(),
   isMobileView: window.matchMedia("(max-width: 768px)").matches,
 };
@@ -91,7 +92,7 @@ function onInput(e: Event) {
 
 function descriptionHtml(task: Task) {
   const { description } = task;
-  const tagRegex = /([+@][a-zA-Z0-9]+|[a-zA-Z0-9]+:[a-zA-Z0-9]+)/g;
+  const tagRegex = /([+@][a-zA-Z0-9-]+|[a-zA-Z0-9-]+:[a-zA-Z0-9-]+)/g;
   const parts: any[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -113,6 +114,10 @@ function descriptionHtml(task: Task) {
         @mouseout=${() => {
           state.toHighlight = "";
           renderApp();
+        }}
+        @click=${() => {
+          state.tags.push(tagText);
+          state.toHighlight = "";
         }}
         style="cursor: pointer; ${state.toHighlight === tagText
           ? "background-color: #FFFF00;"
@@ -205,16 +210,26 @@ function fileToTable(text: string) {
       </tr>
     </thead>
     <tbody>
-      ${state.order.permutation(tasks).map(
-        i =>
-          html`<tr
-            style=${tasks[i].isComplete ? "text-decoration: line-through" : ""}
-          >
-            ${columns.map(
-              column => html`<td>${column.accessor(tasks[i])}</td>`
-            )}
-          </tr>`
-      )}
+      ${state.order
+        .permutation(tasks)
+        .filter(i =>
+          state.tags.reduce(
+            (acc, tag) => acc && tasks[i].description.includes(tag),
+            true
+          )
+        )
+        .map(
+          i =>
+            html`<tr
+              style=${tasks[i].isComplete
+                ? "text-decoration: line-through"
+                : ""}
+            >
+              ${columns.map(
+                column => html`<td>${column.accessor(tasks[i])}</td>`
+              )}
+            </tr>`
+        )}
     </tbody>
   </table>`;
 }
@@ -266,6 +281,19 @@ function appHtml() {
     <div class="container">
       <div class="box">
         <h1 class="title">Todo.txt Viewer</h1>
+        <div class="tags">
+          ${state.tags.map(
+            tag =>
+              html`<span class="tag is-rounded">
+                ${tag}
+                <button
+                  class="delete"
+                  @click=${() =>
+                    (state.tags = state.tags.filter(t => t !== tag))}
+                ></button>
+              </span>`
+          )}
+        </div>
         ${state.rawText === ""
           ? html`<p class="subtitle">
               Paste the contents of your <code>todo.txt</code> file into the
