@@ -72,7 +72,7 @@ function makeCachingOrder(): Order {
 
 // Application state
 const state = {
-  rawText: "",
+  rawText: localStorage.getItem("todo.txt") || "",
   toHighlight: "",
   currentView: View.RAW,
   tags: [] as string[],
@@ -85,8 +85,11 @@ function onInput(e: Event) {
   const textarea = e.currentTarget as HTMLTextAreaElement;
   const wasEmpty = state.rawText === "";
   state.rawText = textarea.value;
-  if (wasEmpty && state.rawText !== "" && state.currentView === View.RAW) {
-    state.currentView = View.TABLE;
+  if (wasEmpty && state.rawText !== "") {
+    localStorage.setItem("todo.txt", state.rawText);
+    if (state.currentView === View.RAW) {
+      state.currentView = View.TABLE;
+    }
   }
 }
 
