@@ -275,7 +275,15 @@ function fileToCards(text: string) {
         </button>
       </div>
     </div>
-    ${state.order.permutation(tasks).map(i => taskToCard(tasks[i]))}`;
+    ${state.order
+      .permutation(tasks)
+      .filter(i =>
+        state.tags.reduce(
+          (acc, tag) => acc && tasks[i].description.includes(tag),
+          true
+        )
+      )
+      .map(i => taskToCard(tasks[i]))}`;
 }
 
 // Main application template
